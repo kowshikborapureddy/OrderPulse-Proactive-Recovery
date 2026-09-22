@@ -131,6 +131,12 @@ A 19-page product management case study covering:
 
 **File:** `OrderPulse Product Case Study PDF.pdf`
 
+### Medium Case Study
+
+Read the full product case study on Medium:
+
+**[Read the OrderPulse Case Study on Medium](https://medium.com/@kowshikborapureedy/orderpulse-proactive-recovery-for-late-night-food-delivery-4954bb6d41be)**
+
 ### Product Requirements Document
 
 Detailed PRD covering:
@@ -163,15 +169,19 @@ Product design and wireframes:
 ## 🛣️ Roadmap
 
 ### Phase 1 — Foundation
+
 Define delivery signals, risk states, and decision rules.
 
 ### Phase 2 — MVP Recovery
+
 Build warnings, recovery options, and customer confirmation.
 
 ### Phase 3 — Validate
+
 Test warning timing, recommendation quality, and recovery outcomes.
 
 ### Phase 4 — Scale
+
 Expand scenarios and operational integrations after validation.
 
 ---
