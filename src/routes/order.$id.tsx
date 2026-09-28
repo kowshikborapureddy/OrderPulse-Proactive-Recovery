@@ -7,7 +7,7 @@ import { StatusPill } from "@/components/StatusPill";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/order/$id")({
-  validateSearch: (s: Record<string, unknown>) => ({ placed: s.placed === true || s.placed === "true" ? true : undefined }),
+  validateSearch: (s: Record<string, unknown>): { placed?: boolean } => (s.placed === true || s.placed === "true" ? { placed: true } : {}),
   head: ({ params }) => ({
     meta: [
       { title: `Order ${params.id} — OrderPulse` },
