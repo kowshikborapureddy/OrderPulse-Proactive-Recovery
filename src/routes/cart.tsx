@@ -38,14 +38,14 @@ function CartPage() {
       </div>
     );
 
-  const b = bill(lines.reduce((a, m) => a + m.price * cart.items[m.id], 0));
+  const b = bill(lines.reduce((a, m) => a + m.price * (cart.items[m.id] ?? 0), 0));
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const er: Record<string, string> = {};
-    if (form.name.trim().length < 2) er.name = "Please enter your name.";
-    if (!/^\d{10}$/.test(form.phone.replace(/\s/g, ""))) er.phone = "Enter a 10-digit phone number.";
-    if (form.address.trim().length < 10) er.address = "Enter a full delivery address (at least 10 characters).";
+    if (form.name.trim().length < 2) er["name"] = "Please enter your name.";
+    if (!/^\d{10}$/.test(form.phone.replace(/\s/g, ""))) er["phone"] = "Enter a 10-digit phone number.";
+    if (form.address.trim().length < 10) er["address"] = "Enter a full delivery address (at least 10 characters).";
     setErrors(er);
     if (Object.keys(er).length) return;
     setSubmitting(true);
@@ -79,8 +79,8 @@ function CartPage() {
               <div key={m.id} className="flex items-center gap-3 py-3">
                 <VegMark veg={m.veg} />
                 <div className="flex-1"><p className="font-medium">{m.name}</p><p className="text-sm text-muted-foreground">{rupee(m.price)} each</p></div>
-                <Stepper qty={cart.items[m.id]} onChange={(n) => setQty(r.id, m, n)} />
-                <span className="w-16 text-right font-semibold">{rupee(m.price * cart.items[m.id])}</span>
+                <Stepper qty={cart.items[m.id] ?? 0} onChange={(n) => setQty(r.id, m, n)} />
+                <span className="w-16 text-right font-semibold">{rupee(m.price * (cart.items[m.id] ?? 0))}</span>
               </div>
             ))}
           </div>

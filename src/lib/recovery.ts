@@ -84,7 +84,7 @@ export function statusLabel(o: Order, now: number) {
   const stage = getStage(o, now);
   if (stage === 4) return { text: "Delivered", tone: "success" as const };
   if (o.risk && r !== "wait") return { text: "Delivery at risk", tone: "risk" as const };
-  return { text: STAGES[stage], tone: "info" as const };
+  return { text: STAGES[stage] ?? "", tone: "info" as const };
 }
 
 export function refundPolicy(o: Order) {

@@ -6,7 +6,7 @@ type Cart = { restaurantId: string | null; items: Record<string, number> };
 type State = { cart: Cart; orders: Order[]; location: string };
 
 const KEY = "orderpulse-demo-v1";
-const initial: State = { cart: { restaurantId: null, items: {} }, orders: [], location: locations[0] };
+const initial: State = { cart: { restaurantId: null, items: {} }, orders: [], location: "Indiranagar" };
 
 type Ctx = State & {
   ready: boolean;
@@ -68,7 +68,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const r = getRestaurant(state.cart.restaurantId!)!;
       const lines = r.menu
         .filter((m) => state.cart.items[m.id])
-        .map((m) => ({ id: m.id, name: m.name, price: m.price, veg: m.veg, qty: state.cart.items[m.id] }));
+        .map((m) => ({ id: m.id, name: m.name, price: m.price, veg: m.veg, qty: state.cart.items[m.id] ?? 0 }));
       const b = bill(lines.reduce((a, l) => a + l.price * l.qty, 0));
       const now = Date.now();
       const id = `OP-${now.toString(36).toUpperCase().slice(-5)}${Math.floor(Math.random() * 90 + 10)}`;
