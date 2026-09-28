@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Demo data persists in browser localStorage via `src/lib/store.tsx` (no Cloud backend yet) — spec allows local demo mode; swap store for Cloud later.
+- Recovery eligibility/refund rules live only in `src/lib/recovery.ts` — explanations never decide policy.
