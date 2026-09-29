@@ -44,6 +44,16 @@ export const scenarios: Scenario[] = [
     revisedEtaMinutes: 20,
     replacement: null,
   },
+  {
+    id: "eta-delay",
+    title: "Simulated ETA delay",
+    appliesToStages: [],
+    events: ["Simulated ETA update moved delivery 15+ min later"],
+    explanation:
+      "[Simulated demo event] The estimated arrival time moved at least 15 minutes later than the previous estimate. No live restaurant or rider feed is connected; this ETA comes from the demo simulator.",
+    revisedEtaMinutes: null,
+    replacement: null,
+  },
 ];
 
 export type Order = {

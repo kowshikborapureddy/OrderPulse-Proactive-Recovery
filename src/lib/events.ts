@@ -31,7 +31,7 @@ export function handleDeliveryEvent(o: Order, ev: DemoEvent, now: number): Handl
     if (delta < ETA_ALERT_THRESHOLD_MIN) return { order: next, alerted: false, reason: `minor ETA change (${delta} min), no alert` };
     next.events = [...next.events, { at: now, label: `Delivery risk detected: ETA +${delta} min`, kind: "risk" }];
     next.alerts = [...(o.alerts ?? []), { key: `eta:${ev.id}`, at: now }];
-    if (!o.risk) next.risk = { scenarioId: "kitchen-backlog", detectedAt: now, frozenStage: getStage(o, now) };
+    if (!o.risk) next.risk = { scenarioId: "eta-delay", detectedAt: now, frozenStage: getStage(o, now) };
     return { order: next, alerted: true, reason: `ETA delay ${delta} min ≥ ${ETA_ALERT_THRESHOLD_MIN}` };
   }
 
