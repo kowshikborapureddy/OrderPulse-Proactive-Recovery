@@ -4,10 +4,11 @@ import { handleDeliveryEvent, scenarioEvent, type DemoEvent } from "./events";
 import { getStage, scenarios, type Order, type RecoveryAction } from "./recovery";
 
 type Cart = { restaurantId: string | null; items: Record<string, number> };
-type State = { cart: Cart; orders: Order[]; location: string };
+export type Notif = { id: string; orderId: string; key: string; at: number; title: string; body: string; read: boolean };
+type State = { cart: Cart; orders: Order[]; location: string; notifications: Notif[] };
 
 const KEY = "orderpulse-demo-v1";
-const initial: State = { cart: { restaurantId: null, items: {} }, orders: [], location: "Indiranagar" };
+const initial: State = { cart: { restaurantId: null, items: {} }, orders: [], location: "Indiranagar", notifications: [] };
 
 type Ctx = State & {
   ready: boolean;
@@ -18,6 +19,10 @@ type Ctx = State & {
   placeOrder: (customer: Order["customer"]) => string;
   triggerDelay: (orderId: string, now: number) => void;
   ingestEvent: (orderId: string, ev: DemoEvent) => void;
+  simulateEtaDelay: (orderId: string, minutes: number) => void;
+  markRead: (id: string) => void;
+  markAllRead: () => void;
+  unreadCount: number;
   chooseRecovery: (orderId: string, action: RecoveryAction) => void;
   resetDemo: () => void;
 };
@@ -43,6 +48,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const update = (fn: (s: State) => State) => setState(fn);
   const patchOrder = (id: string, fn: (o: Order) => Order) =>
     update((s) => ({ ...s, orders: s.orders.map((o) => (o.id === id ? fn(o) : o)) }));
+
+  // Runs a simulated event through the central handler; creates at most one notification per alert key.
+  const applyEvent = (orderId: string, ev: DemoEvent, now: number) =>
+    update((s) => {
+      const o = s.orders.find((x) => x.id === orderId);
+      if (!o) return s;
+      const r = handleDeliveryEvent(o, ev, now);
+      const orders = s.orders.map((x) => (x.id === orderId ? r.order : x));
+      const alert = r.alerted ? r.order.alerts?.[r.order.alerts.length - 1] : undefined;
+      if (!alert || s.notifications.some((n) => n.orderId === orderId && n.key === alert.key)) return { ...s, orders };
+      const isEta = ev.type === "eta_update";
+      const notif: Notif = {
+        id: ref("NTF"), orderId, key: alert.key, at: now, read: false,
+        title: `Delivery at risk · ${o.restaurantName}`,
+        body: "[Simulated demo event] " + (isEta ? `ETA moved to ${ev.newEtaMinutes} min (${r.reason}).` : ev.label),
+      };
+      return { ...s, orders, notifications: [notif, ...s.notifications] };
+    });
 
   const value: Ctx = {
     ...state,
@@ -88,13 +111,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       update((s) => ({ ...s, orders: [order, ...s.orders], cart: { restaurantId: null, items: {} } }));
       return id;
     },
-    triggerDelay: (orderId, now) =>
-      patchOrder(orderId, (o) => {
-        const sc = scenarios.find((x) => x.appliesToStages.includes(getStage(o, now)));
-        const ev = sc && scenarioEvent(sc.id, o.id);
-        return ev ? handleDeliveryEvent(o, ev, now).order : o;
-      }),
-    ingestEvent: (orderId, ev) => patchOrder(orderId, (o) => handleDeliveryEvent(o, ev, Date.now()).order),
+    triggerDelay: (orderId, now) => {
+      const o = state.orders.find((x) => x.id === orderId);
+      const sc = o && scenarios.find((x) => x.appliesToStages.includes(getStage(o, now)));
+      const ev = sc && scenarioEvent(sc.id, orderId);
+      if (ev) applyEvent(orderId, ev, now);
+    },
+    ingestEvent: (orderId, ev) => applyEvent(orderId, ev, Date.now()),
+    simulateEtaDelay: (orderId, minutes) => {
+      const o = state.orders.find((x) => x.id === orderId);
+      if (!o) return;
+      const prev = o.verifiedEtaMinutes ?? o.etaMinutes;
+      applyEvent(orderId, { id: `${orderId}:eta:${(o.seenEventIds ?? []).length}`, source: "demo-simulated", type: "eta_update", newEtaMinutes: prev + minutes, label: `Simulated ETA update: +${minutes} min` }, Date.now());
+    },
+    markRead: (id) => update((s) => ({ ...s, notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) })),
+    markAllRead: () => update((s) => ({ ...s, notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
+    unreadCount: state.notifications.filter((n) => !n.read).length,
     chooseRecovery: (orderId, action) =>
       patchOrder(orderId, (o) => {
         const now = Date.now();

@@ -30,7 +30,7 @@ const CONFIRM: Record<RecoveryAction, string> = {
 
 function RecoveryPage() {
   const { id } = Route.useParams();
-  const { ready, orders, triggerDelay, chooseRecovery } = useStore();
+  const { ready, orders, triggerDelay, chooseRecovery, simulateEtaDelay } = useStore();
   const now = useNow();
   const [pending, setPending] = useState<RecoveryAction | null>(null);
   const [justChose, setJustChose] = useState<RecoveryAction | null>(null);
@@ -75,7 +75,11 @@ function RecoveryPage() {
             {applicable ? (
               <>
                 <p className="mt-1 text-sm text-muted-foreground">Simulate a delay scenario for the current stage: <b>{applicable.title}</b>.</p>
-                <button onClick={() => triggerDelay(o.id, now)} className="mt-3 rounded-xl bg-warning px-4 py-2.5 text-sm font-bold text-warning-foreground">Trigger demo delivery delay</button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button onClick={() => triggerDelay(o.id, now)} className="rounded-xl bg-warning px-4 py-2.5 text-sm font-bold text-warning-foreground">Trigger demo delivery delay</button>
+                  <button onClick={() => simulateEtaDelay(o.id, 20)} className="rounded-xl border border-warning px-4 py-2.5 text-sm font-bold text-warning">Simulate +20 min ETA delay</button>
+                  <button onClick={() => simulateEtaDelay(o.id, 5)} className="rounded-xl border px-4 py-2.5 text-sm font-semibold">Simulate +5 min (minor, no alert)</button>
+                </div>
               </>
             ) : (
               <p className="mt-1 text-sm text-muted-foreground">This order has been delivered — no delay can be simulated. Place a new order to try it.</p>
@@ -90,7 +94,7 @@ function RecoveryPage() {
             <div className="flex items-center gap-2 font-bold text-warning"><AlertTriangle className="h-5 w-5" />Delivery risk detected at "{STAGES[o.risk.frozenStage]}"</div>
             <p className="mt-1 text-sm">Detected {new Date(o.risk.detectedAt).toLocaleTimeString()} · {sc.title}</p>
             <p className="mt-2 text-sm">
-              Revised ETA: {sc.revisedEtaMinutes ? <b>about {sc.revisedEtaMinutes} min (supplied by dispatch)</b> : <b>not yet available — we won't guess.</b>}
+              Revised ETA: {sc.revisedEtaMinutes ? <b>about {sc.revisedEtaMinutes} min (simulated dispatch estimate)</b> : o.verifiedEtaMinutes ? <b>about {o.verifiedEtaMinutes} min (simulated demo ETA update)</b> : <b>not yet available — we won't guess.</b>}
             </p>
           </div>
 

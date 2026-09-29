@@ -1,5 +1,6 @@
-import { Link } from "@tanstack/react-router";
-import { Home, Search, Receipt, ShoppingBag, Activity } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { Home, Search, Receipt, ShoppingBag, Activity, Bell } from "lucide-react";
 import { useStore } from "@/lib/store";
 
 const links = [
@@ -18,7 +19,10 @@ export function Header() {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary"><Activity className="h-5 w-5" /></span>
           OrderPulse
         </Link>
-        <span className="rounded-full border border-brand-foreground/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand-foreground/80 md:hidden">Demo mode</span>
+        <div className="flex items-center gap-2 md:hidden">
+          <span className="rounded-full border border-brand-foreground/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand-foreground/80">Demo mode</span>
+          <NotificationBell />
+        </div>
         <nav className="hidden items-center gap-1 md:flex">
           <span className="mr-3 rounded-full border border-brand-foreground/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand-foreground/80" title="Data is stored in this browser only">Demo mode</span>
           {links.map((l) => (
@@ -27,6 +31,7 @@ export function Header() {
               {l.to === "/cart" && cartCount > 0 && <span className="rounded-full bg-violet px-1.5 text-xs font-bold">{cartCount}</span>}
             </Link>
           ))}
+          <NotificationBell />
         </nav>
       </div>
     </header>
@@ -45,5 +50,42 @@ export function MobileNav() {
         </Link>
       ))}
     </nav>
+  );
+}
+
+export function NotificationBell() {
+  const { notifications, unreadCount, markRead, markAllRead } = useStore();
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  return (
+    <div className="relative">
+      <button aria-label={`Notifications, ${unreadCount} unread`} onClick={() => setOpen((v) => !v)} className="relative flex h-9 w-9 items-center justify-center rounded-lg hover:bg-brand-foreground/10">
+        <Bell className="h-5 w-5" />
+        {unreadCount > 0 && <span data-testid="unread-count" className="absolute -right-0.5 -top-0.5 rounded-full bg-warning px-1.5 text-[10px] font-bold text-warning-foreground">{unreadCount}</span>}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-11 z-50 w-80 max-w-[90vw] overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-card">
+          <div className="flex items-center justify-between border-b px-4 py-2.5">
+            <p className="text-sm font-bold">Notifications <span className="font-normal text-muted-foreground">· demo</span></p>
+            {unreadCount > 0 && <button onClick={markAllRead} className="text-xs font-semibold text-primary">Mark all read</button>}
+          </div>
+          <ul className="max-h-96 overflow-y-auto">
+            {notifications.length === 0 && <li className="p-4 text-sm text-muted-foreground">No notifications yet.</li>}
+            {notifications.map((n) => (
+              <li key={n.id}>
+                <button onClick={() => { markRead(n.id); setOpen(false); navigate({ to: "/recovery/$id", params: { id: n.orderId } }); }} className="flex w-full gap-2 border-b px-4 py-3 text-left hover:bg-muted">
+                  <span className={n.read ? "mt-1.5 h-2 w-2 shrink-0 rounded-full bg-transparent" : "mt-1.5 h-2 w-2 shrink-0 rounded-full bg-warning"} />
+                  <span className="flex-1">
+                    <span className="block text-sm font-semibold">{n.title}</span>
+                    <span className="block text-xs text-muted-foreground">{n.body}</span>
+                    <span className="block text-[10px] text-muted-foreground">{n.orderId} · {new Date(n.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
