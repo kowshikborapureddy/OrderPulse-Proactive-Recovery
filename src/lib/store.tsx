@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { bill, getRestaurant, locations, type MenuItem } from "./data";
+import { handleDeliveryEvent, scenarioEvent, type DemoEvent } from "./events";
 import { getStage, scenarios, type Order, type RecoveryAction } from "./recovery";
 
 type Cart = { restaurantId: string | null; items: Record<string, number> };
@@ -16,6 +17,7 @@ type Ctx = State & {
   cartCount: number;
   placeOrder: (customer: Order["customer"]) => string;
   triggerDelay: (orderId: string, now: number) => void;
+  ingestEvent: (orderId: string, ev: DemoEvent) => void;
   chooseRecovery: (orderId: string, action: RecoveryAction) => void;
   resetDemo: () => void;
 };
@@ -88,19 +90,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     triggerDelay: (orderId, now) =>
       patchOrder(orderId, (o) => {
-        const stage = getStage(o, now);
-        const sc = scenarios.find((x) => x.appliesToStages.includes(stage));
-        if (!sc || o.risk) return o;
-        return {
-          ...o,
-          risk: { scenarioId: sc.id, detectedAt: now, frozenStage: stage },
-          events: [
-            ...o.events,
-            ...sc.events.map((label) => ({ at: now, label, kind: "info" as const })),
-            { at: now, label: "Delivery risk detected: " + sc.title, kind: "risk" as const },
-          ],
-        };
+        const sc = scenarios.find((x) => x.appliesToStages.includes(getStage(o, now)));
+        const ev = sc && scenarioEvent(sc.id, o.id);
+        return ev ? handleDeliveryEvent(o, ev, now).order : o;
       }),
+    ingestEvent: (orderId, ev) => patchOrder(orderId, (o) => handleDeliveryEvent(o, ev, Date.now()).order),
     chooseRecovery: (orderId, action) =>
       patchOrder(orderId, (o) => {
         const now = Date.now();

@@ -53,12 +53,9 @@ export function handleDeliveryEvent(o: Order, ev: DemoEvent, now: number): Handl
   };
 }
 
-// Demo scenario → simulated serious-problem events (used by the demo delay button).
-export function scenarioEvents(scenarioId: string, orderId: string): DemoEvent[] {
+// Demo scenario → one simulated serious-problem event (used by the demo delay button).
+export function scenarioEvent(scenarioId: string, orderId: string): DemoEvent | null {
   const sc = scenarios.find((s) => s.id === scenarioId);
-  if (!sc) return [];
-  return [
-    ...sc.events.slice(0, -1).map((label, i) => ({ id: `${orderId}:${sc.id}:ctx${i}`, source: "demo-simulated" as const, type: "serious_problem" as const, problem: `${sc.id}-ctx${i}`, scenarioId: sc.id, label })),
-    { id: `${orderId}:${sc.id}`, source: "demo-simulated", type: "serious_problem", problem: sc.id, scenarioId: sc.id, label: sc.events[sc.events.length - 1]! },
-  ];
+  if (!sc) return null;
+  return { id: `${orderId}:${sc.id}`, source: "demo-simulated", type: "serious_problem", problem: sc.id, scenarioId: sc.id, label: sc.events.join(" · ") };
 }
