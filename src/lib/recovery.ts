@@ -63,6 +63,9 @@ export type Order = {
   recovery?: { action: RecoveryAction; at: number; ref: string };
   supportRef?: string;
   events: { at: number; label: string; kind: "info" | "risk" | "success" }[];
+  verifiedEtaMinutes?: number;
+  seenEventIds?: string[];
+  alerts?: { key: string; at: number }[];
 };
 
 export function getStage(o: Order, now: number): number {
