@@ -117,17 +117,34 @@ function RecoveryPage() {
             <p className="mt-3 text-xs text-muted-foreground">This explanation is a predefined demo scenario. No real AI model or live courier feed is connected.</p>
           </div>
 
-          {(justChose || o.recovery) && (
-            <div className="rounded-2xl bg-success/15 p-5 text-success-strong">
-              <div className="flex items-center gap-2 font-bold"><CheckCircle2 className="h-5 w-5" />{o.recovery ? `Choice recorded · Ref ${o.recovery.ref}` : `Support ticket opened · Ref ${o.supportRef}`}</div>
-              <p className="mt-1 text-sm">{CONFIRM[(justChose ?? o.recovery!.action)]}</p>
-              {o.recovery?.action === "cancel" && <p className="mt-2 text-sm">{refundPolicy(o).text}</p>}
-              {o.recovery?.action === "wait" && <p className="mt-2 text-sm">Current stage: <b>{STAGES[stage]}</b></p>}
+          {o.recovery && (
+            <div data-testid="recovery-result" className="rounded-2xl bg-success/15 p-5 text-success-strong">
+              <div className="flex items-center gap-2 font-bold"><CheckCircle2 className="h-5 w-5" />{o.recovery.action === "cancel" ? "Cancellation request submitted (demo)" : "Choice recorded"} · Ref {o.recovery.ref}</div>
+              <p className="mt-1 text-sm">{CONFIRM[o.recovery.action]}</p>
+              {o.recovery.action === "cancel" && <p className="mt-2 text-sm">{refundPolicy(o).text} No real refund or payment is processed in this demo.</p>}
+              {o.recovery.action === "wait" && <p className="mt-2 text-sm">Order still active · monitoring simulated events · current stage: <b>{STAGES[stage]}</b></p>}
+              {o.recovery.action === "wait" && stage < 4 && (
+                <button onClick={() => simulateEtaDelay(o.id, 20)} className="mt-3 mr-2 rounded-xl border border-warning px-4 py-2 text-sm font-bold text-warning">Simulate another +20 min ETA delay</button>
+              )}
               <Link to="/order/$id" params={{ id: o.id }} className="mt-3 inline-block rounded-xl bg-success px-4 py-2 text-sm font-bold text-success-foreground">Track order</Link>
             </div>
           )}
 
-          {!o.recovery && (
+          {o.supportHandoff && (
+            <div data-testid="support-handoff" className="rounded-2xl border bg-card p-5">
+              <div className="flex items-center gap-2 font-bold"><Headphones className="h-5 w-5 text-primary" />Demo support handoff · Ref {o.supportHandoff.ref}</div>
+              <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-sm">
+                <dt className="text-muted-foreground">Order ID</dt><dd className="font-semibold">{o.supportHandoff.orderId}</dd>
+                <dt className="text-muted-foreground">Delivery issue</dt><dd>{o.supportHandoff.issue}</dd>
+                <dt className="text-muted-foreground">Created</dt><dd>{new Date(o.supportHandoff.at).toLocaleString()}</dd>
+              </dl>
+              <p className="mt-2 text-xs text-muted-foreground">Demo only — no real support agent is notified.</p>
+            </div>
+          )}
+
+          {stage === 4 && !o.recovery && <p className="rounded-2xl border p-4 text-sm text-muted-foreground">This order has been delivered — recovery actions are no longer available.</p>}
+
+          {!o.recovery && stage < 4 && (
             <div className="space-y-3">
               <h2 className="font-display text-lg font-bold">Your options</h2>
               <p className="text-sm text-muted-foreground">Only options allowed by the demo policy for this situation are shown. Nothing happens until you confirm.</p>
