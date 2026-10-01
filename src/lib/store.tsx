@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { bill, getRestaurant, locations, type MenuItem } from "./data";
 import { handleDeliveryEvent, scenarioEvent, type DemoEvent } from "./events";
-import { getStage, scenarios, type Order, type RecoveryAction } from "./recovery";
+import { canRecover, scenarioFor, getStage, scenarios, type Order, type RecoveryAction } from "./recovery";
 
 type Cart = { restaurantId: string | null; items: Record<string, number> };
 export type Notif = { id: string; orderId: string; key: string; at: number; title: string; body: string; read: boolean };
@@ -130,15 +130,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     chooseRecovery: (orderId, action) =>
       patchOrder(orderId, (o) => {
         const now = Date.now();
+        if (!canRecover(o, now, action)) return o;
         const labels: Record<RecoveryAction, string> = {
           wait: "You chose to keep waiting. Monitoring resumed.",
           replace: "Replacement requested — awaiting restaurant confirmation.",
-          cancel: "Cancellation requested — awaiting restaurant confirmation.",
-          support: "Support ticket opened.",
+          cancel: "Cancellation request submitted (demo) — no real cancellation or refund is processed.",
+          support: "Demo support handoff created.",
         };
         const r = ref(action === "support" ? "SUP" : "REC");
         const ev = { at: now, label: labels[action] + ` (Ref ${r})`, kind: "success" as const };
-        if (action === "support") return { ...o, supportRef: r, events: [...o.events, ev] };
+        if (action === "support") {
+          const issue = scenarioFor(o)?.title ?? "Customer requested help";
+          return { ...o, supportRef: r, supportHandoff: { ref: r, orderId: o.id, issue, at: now }, events: [...o.events, ev] };
+        }
         return { ...o, recovery: { action, at: now, ref: r }, events: [...o.events, ev] };
       }),
     resetDemo: () => setState(initial),
