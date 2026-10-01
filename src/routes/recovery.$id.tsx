@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AlertTriangle, Bot, CheckCircle2, Clock, Headphones, Radar, RefreshCw, XCircle, ArrowLeft } from "lucide-react";
 import { useNow, useStore } from "@/lib/store";
-import { availableOptions, getStage, refundPolicy, scenarioFor, scenarios, STAGES, type RecoveryAction } from "@/lib/recovery";
+import { canRecover, availableOptions, getStage, refundPolicy, scenarioFor, scenarios, STAGES, type RecoveryAction } from "@/lib/recovery";
 import { Loading } from "@/components/ui-bits";
 import { cn } from "@/lib/utils";
 
@@ -22,10 +22,10 @@ export const Route = createFileRoute("/recovery/$id")({
 const FLOW = ["Monitor", "Detect", "Warn", "Explain", "Options", "Choose", "Track"];
 const ICONS: Record<RecoveryAction, typeof Clock> = { wait: Clock, replace: RefreshCw, cancel: XCircle, support: Headphones };
 const CONFIRM: Record<RecoveryAction, string> = {
-  wait: "We're monitoring your order and tracking has resumed.",
-  replace: "Your replacement request has been sent to the restaurant. It isn't final until they confirm.",
-  cancel: "Your cancellation request has been sent. The order is not cancelled until the restaurant confirms.",
-  support: "A support agent will contact you on your phone number. You can still choose another option below.",
+  wait: "Decision saved: continue_waiting. Your order stays active and we keep monitoring simulated events.",
+  replace: "Your replacement request was saved in this demo (decision: replacement_requested). No real restaurant is connected.",
+  cancel: "Your cancellation request was saved in this demo. The order is not actually cancelled — no restaurant is connected.",
+  support: "A demo support handoff was created with your order ID and issue. You can still choose another option below.",
 };
 
 function RecoveryPage() {
@@ -33,7 +33,6 @@ function RecoveryPage() {
   const { ready, orders, triggerDelay, chooseRecovery, simulateEtaDelay } = useStore();
   const now = useNow();
   const [pending, setPending] = useState<RecoveryAction | null>(null);
-  const [justChose, setJustChose] = useState<RecoveryAction | null>(null);
 
   if (!ready) return <Loading />;
   const o = orders.find((x) => x.id === id);
@@ -47,9 +46,8 @@ function RecoveryPage() {
   const recommended: RecoveryAction = sc?.revisedEtaMinutes ? "wait" : sc?.replacement ? "replace" : "wait";
 
   const confirm = () => {
-    if (!pending) return;
+    if (!pending || !canRecover(o, Date.now(), pending)) return setPending(null);
     chooseRecovery(o.id, pending);
-    setJustChose(pending);
     setPending(null);
   };
 
@@ -117,23 +115,48 @@ function RecoveryPage() {
             <p className="mt-3 text-xs text-muted-foreground">This explanation is a predefined demo scenario. No real AI model or live courier feed is connected.</p>
           </div>
 
-          {(justChose || o.recovery) && (
-            <div className="rounded-2xl bg-success/15 p-5 text-success-strong">
-              <div className="flex items-center gap-2 font-bold"><CheckCircle2 className="h-5 w-5" />{o.recovery ? `Choice recorded · Ref ${o.recovery.ref}` : `Support ticket opened · Ref ${o.supportRef}`}</div>
-              <p className="mt-1 text-sm">{CONFIRM[(justChose ?? o.recovery!.action)]}</p>
-              {o.recovery?.action === "cancel" && <p className="mt-2 text-sm">{refundPolicy(o).text}</p>}
-              {o.recovery?.action === "wait" && <p className="mt-2 text-sm">Current stage: <b>{STAGES[stage]}</b></p>}
+          {o.recovery && (
+            <div data-testid="recovery-result" className="rounded-2xl bg-success/15 p-5 text-success-strong">
+              <div className="flex items-center gap-2 font-bold"><CheckCircle2 className="h-5 w-5" />{o.recovery.action === "cancel" ? "Cancellation request submitted (demo)" : "Choice recorded"} · Ref {o.recovery.ref}</div>
+              <p className="mt-1 text-sm">{CONFIRM[o.recovery.action]}</p>
+              {o.recovery.action === "replace" && <p className="mt-2 text-sm">Requested: {sc.replacement} — pending simulated restaurant confirmation. Nothing is final yet.</p>}
+              {o.recovery.action === "cancel" && <p className="mt-2 text-sm">{refundPolicy(o).text} No real refund or payment is processed in this demo.</p>}
+              {o.recovery.action === "wait" && <p className="mt-2 text-sm">Order still active · monitoring simulated events · current stage: <b>{STAGES[stage]}</b></p>}
+              {o.recovery.action === "wait" && stage < 4 && (
+                <button onClick={() => simulateEtaDelay(o.id, 20)} className="mt-3 mr-2 rounded-xl border border-warning px-4 py-2 text-sm font-bold text-warning">Simulate another +20 min ETA delay</button>
+              )}
               <Link to="/order/$id" params={{ id: o.id }} className="mt-3 inline-block rounded-xl bg-success px-4 py-2 text-sm font-bold text-success-foreground">Track order</Link>
             </div>
           )}
 
-          {!o.recovery && (
+          {o.supportHandoff && (
+            <div data-testid="support-handoff" className="rounded-2xl border bg-card p-5">
+              <div className="flex items-center gap-2 font-bold"><Headphones className="h-5 w-5 text-primary" />Demo support handoff · Ref {o.supportHandoff.ref}</div>
+              <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-sm">
+                <dt className="text-muted-foreground">Order ID</dt><dd className="font-semibold">{o.supportHandoff.orderId}</dd>
+                <dt className="text-muted-foreground">Delivery issue</dt><dd>{o.supportHandoff.issue}</dd>
+                <dt className="text-muted-foreground">Created</dt><dd>{new Date(o.supportHandoff.at).toLocaleString()}</dd>
+              </dl>
+              <p className="mt-2 text-xs text-muted-foreground">Demo only — no real support agent is notified.</p>
+            </div>
+          )}
+
+          {o.cancelDenied && (
+            <div data-testid="cancel-denied" className="rounded-2xl border border-warning/40 bg-warning/10 p-5 text-sm">
+              <p className="font-bold text-warning">Cancellation not eligible (demo policy)</p>
+              <p className="mt-1">{o.cancelDenied.reason}</p>
+            </div>
+          )}
+
+          {stage === 4 && !o.recovery && <p className="rounded-2xl border p-4 text-sm text-muted-foreground">This order has been delivered — recovery actions are no longer available.</p>}
+
+          {!o.recovery && stage < 4 && (
             <div className="space-y-3">
               <h2 className="font-display text-lg font-bold">Your options</h2>
               <p className="text-sm text-muted-foreground">Only options allowed by the demo policy for this situation are shown. Nothing happens until you confirm.</p>
               {opts.map((op) => {
                 const Icon = ICONS[op.action];
-                const done = op.action === "support" && o.supportRef;
+                const done = (op.action === "support" && o.supportRef) || (op.action === "cancel" && o.cancelDenied);
                 return (
                   <button key={op.action} disabled={!!done} onClick={() => setPending(op.action)} className={cn("flex w-full items-start gap-3 rounded-2xl border bg-card p-4 text-left transition hover:border-primary disabled:opacity-60", pending === op.action && "border-primary ring-2 ring-primary/30")}>
                     <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", op.action === "cancel" ? "text-warning" : "text-primary")} />
@@ -150,7 +173,7 @@ function RecoveryPage() {
               })}
               {pending && (
                 <div className="sticky bottom-20 flex flex-col gap-2 rounded-2xl border-2 border-primary bg-card p-4 shadow-card sm:flex-row sm:items-center md:bottom-4">
-                  <p className="flex-1 text-sm font-semibold">Confirm: {opts.find((x) => x.action === pending)?.title}?</p>
+                  <div className="flex-1 text-sm"><p className="font-semibold">Confirm: {opts.find((x) => x.action === pending)?.title}?</p>{pending === "cancel" && <p data-testid="cancel-eligibility" className="mt-1 text-muted-foreground">{refundPolicy(o).eligible ? "Demo policy check: eligible for a full refund once confirmed (simulated)." : "Demo policy check: not eligible — confirming will keep your order active."}</p>}</div>
                   <button onClick={() => setPending(null)} className="rounded-xl border px-4 py-2 text-sm font-semibold">Go back</button>
                   <button onClick={confirm} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Confirm choice</button>
                 </div>

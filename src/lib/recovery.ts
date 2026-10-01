@@ -70,8 +70,10 @@ export type Order = {
   placedAt: number;
   etaMinutes: number;
   risk?: { scenarioId: string; detectedAt: number; frozenStage: number };
-  recovery?: { action: RecoveryAction; at: number; ref: string };
+  recovery?: { action: RecoveryAction; at: number; ref: string; decision?: string };
+  cancelDenied?: { at: number; reason: string };
   supportRef?: string;
+  supportHandoff?: { ref: string; orderId: string; issue: string; at: number };
   events: { at: number; label: string; kind: "info" | "risk" | "success" }[];
   verifiedEtaMinutes?: number;
   seenEventIds?: string[];
@@ -92,8 +94,8 @@ export const scenarioFor = (o: Order) => scenarios.find((s) => s.id === o.risk?.
 
 export function statusLabel(o: Order, now: number) {
   const r = o.recovery?.action;
-  if (r === "cancel") return { text: "Cancellation requested", tone: "risk" as const };
-  if (r === "replace") return { text: "Replacement requested", tone: "info" as const };
+  if (r === "cancel") return { text: "Cancellation request submitted (demo)", tone: "risk" as const };
+  if (r === "replace") return { text: "Replacement request submitted (demo)", tone: "info" as const };
   const stage = getStage(o, now);
   if (stage === 4) return { text: "Delivered", tone: "success" as const };
   if (o.risk && r !== "wait") return { text: "Delivery at risk", tone: "risk" as const };
@@ -128,4 +130,13 @@ export function availableOptions(o: Order) {
   opts.push({ action: "cancel", title: "Request cancellation", detail: refundPolicy(o).text });
   opts.push({ action: "support", title: "Contact support", detail: "Open a support ticket. You can still choose another option afterwards." });
   return opts;
+}
+
+// Recovery actions are only allowed on active, not-yet-resolved orders.
+export function canRecover(o: Order, now: number, action: RecoveryAction): boolean {
+  if (getStage(o, now) === 4 || o.recovery?.action === "cancel") return false;
+  if (action === "support") return !o.supportRef;
+  if (action === "replace" && !scenarioFor(o)?.replacement) return false; // demo data must confirm availability
+  if (action === "cancel" && o.cancelDenied) return false;
+  return !!o.risk && !o.recovery;
 }
