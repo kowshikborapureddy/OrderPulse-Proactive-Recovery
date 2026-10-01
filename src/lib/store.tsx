@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { bill, getRestaurant, locations, type MenuItem } from "./data";
 import { handleDeliveryEvent, scenarioEvent, type DemoEvent } from "./events";
-import { canRecover, scenarioFor, getStage, scenarios, type Order, type RecoveryAction } from "./recovery";
+import { refundPolicy, canRecover, scenarioFor, getStage, scenarios, type Order, type RecoveryAction } from "./recovery";
 
 type Cart = { restaurantId: string | null; items: Record<string, number> };
 export type Notif = { id: string; orderId: string; key: string; at: number; title: string; body: string; read: boolean };
@@ -128,22 +128,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     markAllRead: () => update((s) => ({ ...s, notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
     unreadCount: state.notifications.filter((n) => !n.read).length,
     chooseRecovery: (orderId, action) =>
-      patchOrder(orderId, (o) => {
+      update((s) => {
+        const o = s.orders.find((x) => x.id === orderId);
         const now = Date.now();
-        if (!canRecover(o, now, action)) return o;
-        const labels: Record<RecoveryAction, string> = {
-          wait: "You chose to keep waiting. Monitoring resumed.",
-          replace: "Replacement requested — awaiting restaurant confirmation.",
-          cancel: "Cancellation request submitted (demo) — no real cancellation or refund is processed.",
-          support: "Demo support handoff created.",
-        };
+        if (!o || !canRecover(o, now, action)) return s;
         const r = ref(action === "support" ? "SUP" : "REC");
-        const ev = { at: now, label: labels[action] + ` (Ref ${r})`, kind: "success" as const };
-        if (action === "support") {
+        let next: Order;
+        let note: string;
+        if (action === "cancel" && !refundPolicy(o).eligible) {
+          const reason = "Demo policy: cancellation is not available because the order has already been picked up by a rider. Your order stays active.";
+          next = { ...o, cancelDenied: { at: now, reason }, events: [...o.events, { at: now, label: "Cancellation not eligible (demo policy) — order remains active.", kind: "risk" }] };
+          note = "Cancellation not eligible under demo policy. Your order is still active.";
+        } else if (action === "support") {
           const issue = scenarioFor(o)?.title ?? "Customer requested help";
-          return { ...o, supportRef: r, supportHandoff: { ref: r, orderId: o.id, issue, at: now }, events: [...o.events, ev] };
+          next = { ...o, supportRef: r, supportHandoff: { ref: r, orderId: o.id, issue, at: now }, events: [...o.events, { at: now, label: `Demo support handoff created (Ref ${r})`, kind: "success" }] };
+          note = `Demo support handoff ${r} created for ${o.id}. No real agent is contacted.`;
+        } else {
+          const labels = {
+            wait: "You chose to keep waiting. Monitoring resumed.",
+            replace: "Replacement request submitted (demo) — awaiting simulated restaurant confirmation.",
+            cancel: "Cancellation request submitted (demo) — no real cancellation or refund is processed.",
+          } as const;
+          const decision = { wait: "continue_waiting", replace: "replacement_requested", cancel: "cancellation_requested" }[action];
+          next = { ...o, recovery: { action, at: now, ref: r, decision }, events: [...o.events, { at: now, label: labels[action] + ` (Ref ${r})`, kind: "success" }] };
+          note = labels[action];
         }
-        return { ...o, recovery: { action, at: now, ref: r }, events: [...o.events, ev] };
+        const key = `decision:${action}`;
+        const dup = s.notifications.some((n) => n.orderId === orderId && n.key === key);
+        const notifications = dup ? s.notifications : [{ id: ref("NTF"), orderId, key, at: now, read: false, title: `Your choice · ${o.restaurantName}`, body: "[Demo] " + note }, ...s.notifications];
+        return { ...s, orders: s.orders.map((x) => (x.id === orderId ? next : x)), notifications };
       }),
     resetDemo: () => setState(initial),
   };
