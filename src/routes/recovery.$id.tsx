@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AlertTriangle, Bot, CheckCircle2, Clock, Headphones, Radar, RefreshCw, XCircle, ArrowLeft } from "lucide-react";
 import { useNow, useStore } from "@/lib/store";
-import { availableOptions, getStage, refundPolicy, scenarioFor, scenarios, STAGES, type RecoveryAction } from "@/lib/recovery";
+import { canRecover, availableOptions, getStage, refundPolicy, scenarioFor, scenarios, STAGES, type RecoveryAction } from "@/lib/recovery";
 import { Loading } from "@/components/ui-bits";
 import { cn } from "@/lib/utils";
 
@@ -24,8 +24,8 @@ const ICONS: Record<RecoveryAction, typeof Clock> = { wait: Clock, replace: Refr
 const CONFIRM: Record<RecoveryAction, string> = {
   wait: "We're monitoring your order and tracking has resumed.",
   replace: "Your replacement request has been sent to the restaurant. It isn't final until they confirm.",
-  cancel: "Your cancellation request has been sent. The order is not cancelled until the restaurant confirms.",
-  support: "A support agent will contact you on your phone number. You can still choose another option below.",
+  cancel: "Your cancellation request was saved in this demo. The order is not actually cancelled — no restaurant is connected.",
+  support: "A demo support handoff was created with your order ID and issue. You can still choose another option below.",
 };
 
 function RecoveryPage() {
@@ -33,7 +33,6 @@ function RecoveryPage() {
   const { ready, orders, triggerDelay, chooseRecovery, simulateEtaDelay } = useStore();
   const now = useNow();
   const [pending, setPending] = useState<RecoveryAction | null>(null);
-  const [justChose, setJustChose] = useState<RecoveryAction | null>(null);
 
   if (!ready) return <Loading />;
   const o = orders.find((x) => x.id === id);
@@ -47,9 +46,8 @@ function RecoveryPage() {
   const recommended: RecoveryAction = sc?.revisedEtaMinutes ? "wait" : sc?.replacement ? "replace" : "wait";
 
   const confirm = () => {
-    if (!pending) return;
+    if (!pending || !canRecover(o, Date.now(), pending)) return setPending(null);
     chooseRecovery(o.id, pending);
-    setJustChose(pending);
     setPending(null);
   };
 
@@ -167,7 +165,7 @@ function RecoveryPage() {
               })}
               {pending && (
                 <div className="sticky bottom-20 flex flex-col gap-2 rounded-2xl border-2 border-primary bg-card p-4 shadow-card sm:flex-row sm:items-center md:bottom-4">
-                  <p className="flex-1 text-sm font-semibold">Confirm: {opts.find((x) => x.action === pending)?.title}?</p>
+                  <div className="flex-1 text-sm"><p className="font-semibold">Confirm: {opts.find((x) => x.action === pending)?.title}?</p>{pending === "cancel" && <p data-testid="cancel-eligibility" className="mt-1 text-muted-foreground">{refundPolicy(o).eligible ? "Demo policy check: eligible for a full refund once confirmed (simulated)." : "Demo policy check: not eligible for an automatic refund."}</p>}</div>
                   <button onClick={() => setPending(null)} className="rounded-xl border px-4 py-2 text-sm font-semibold">Go back</button>
                   <button onClick={confirm} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Confirm choice</button>
                 </div>
