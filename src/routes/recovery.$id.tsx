@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { AlertTriangle, Bot, CheckCircle2, Clock, Headphones, Radar, RefreshCw, XCircle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, Bot, CheckCircle2, ChevronDown, Clock, Headphones, Radar, RefreshCw, XCircle, ArrowLeft } from "lucide-react";
 import { useNow, useStore } from "@/lib/store";
 import { canRecover, availableOptions, getStage, refundPolicy, scenarioFor, scenarios, STAGES, type RecoveryAction } from "@/lib/recovery";
 import { Loading } from "@/components/ui-bits";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/recovery/$id")({
@@ -41,9 +42,8 @@ function RecoveryPage() {
   const stage = getStage(o, now);
   const sc = scenarioFor(o);
   const applicable = scenarios.find((s) => s.appliesToStages.includes(stage));
-  const step = !o.risk ? 0 : o.recovery ? 6 : 4;
   const opts = o.risk ? availableOptions(o) : [];
-  const recommended: RecoveryAction = sc?.revisedEtaMinutes ? "wait" : sc?.replacement ? "replace" : "wait";
+  const recommended = sc?.recommendedAction ?? "wait";
 
   const confirm = () => {
     if (!pending || !canRecover(o, Date.now(), pending)) return setPending(null);
@@ -57,40 +57,21 @@ function RecoveryPage() {
       <div className="rounded-3xl bg-hero p-6 text-brand-foreground">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand-foreground/60">OrderPulse Recovery · {o.id}</p>
         <h1 className="mt-1 font-display text-2xl font-bold">{o.restaurantName}</h1>
-        <p className="mt-1 text-sm text-brand-foreground/75">AI recommends. Policy controls. You decide.</p>
-        <div className="no-scrollbar mt-5 flex gap-1 overflow-x-auto">
-          {FLOW.map((f, i) => (
-            <span key={f} className={cn("shrink-0 rounded-full px-3 py-1 text-xs font-semibold", i <= step ? (o.risk && !o.recovery && i >= 1 ? "bg-warning text-warning-foreground" : "bg-primary") : "bg-brand-foreground/10 text-brand-foreground/60")}>{i + 1}. {f}</span>
-          ))}
-        </div>
+        <p className="mt-1 text-sm text-brand-foreground/75">AI recommends. Policy controls. Customer decides.</p>
       </div>
 
       {!o.risk && (
         <div className="space-y-4 rounded-2xl border bg-card p-5">
-          <div className="flex items-center gap-3"><Radar className="h-6 w-6 text-success" /><div><p className="font-bold">Monitoring your order</p><p className="text-sm text-muted-foreground">Current stage: {STAGES[stage]}. No delivery risk detected.</p></div></div>
-          <div className="rounded-xl border border-dashed p-4">
-            <p className="text-sm font-semibold">Demo controls</p>
-            {applicable ? (
-              <>
-                <p className="mt-1 text-sm text-muted-foreground">Simulate a delay scenario for the current stage: <b>{applicable.title}</b>.</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button onClick={() => triggerDelay(o.id, now)} className="rounded-xl bg-warning px-4 py-2.5 text-sm font-bold text-warning-foreground">Trigger demo delivery delay</button>
-                  <button onClick={() => simulateEtaDelay(o.id, 20)} className="rounded-xl border border-warning px-4 py-2.5 text-sm font-bold text-warning">Simulate +20 min ETA delay</button>
-                  <button onClick={() => simulateEtaDelay(o.id, 5)} className="rounded-xl border px-4 py-2.5 text-sm font-semibold">Simulate +5 min (minor, no alert)</button>
-                </div>
-              </>
-            ) : (
-              <p className="mt-1 text-sm text-muted-foreground">This order has been delivered — no delay can be simulated. Place a new order to try it.</p>
-            )}
-          </div>
+          <div className="flex items-center gap-3"><Radar className="h-6 w-6 text-success" /><div><p className="font-bold">We’re monitoring your order</p><p className="text-sm text-muted-foreground">Current stage: {STAGES[stage]}. We’ll alert you automatically if a meaningful delivery risk appears.</p></div></div>
+          <p className="text-xs text-muted-foreground">Demo monitoring uses simulated events. No live restaurant or courier connection is active.</p>
         </div>
       )}
 
       {o.risk && sc && (
         <>
           <div className="rounded-2xl border border-warning/40 bg-warning/10 p-5">
-            <div className="flex items-center gap-2 font-bold text-warning"><AlertTriangle className="h-5 w-5" />Delivery risk detected at "{STAGES[o.risk.frozenStage]}"</div>
-            <p className="mt-1 text-sm">Detected {new Date(o.risk.detectedAt).toLocaleTimeString()} · {sc.title}</p>
+            <div className="flex items-center gap-2 font-bold text-warning"><AlertTriangle className="h-5 w-5" />Your order may be delayed</div>
+            <p className="mt-2 text-sm">{sc.customerSummary}</p>
             <p className="mt-2 text-sm">
               Revised ETA: {sc.revisedEtaMinutes ? <b>about {sc.revisedEtaMinutes} min (simulated dispatch estimate)</b> : o.verifiedEtaMinutes ? <b>about {o.verifiedEtaMinutes} min (simulated demo ETA update)</b> : <b>not yet available — we won't guess.</b>}
             </p>
@@ -102,18 +83,16 @@ function RecoveryPage() {
               <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Demo explanation · no live AI</span>
             </div>
             <p className="mt-3 text-sm leading-relaxed">{sc.explanation}</p>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Delivery events</p>
-            <ul className="mt-2 space-y-1.5">
-              {o.events.map((e, i) => (
-                <li key={i} className="flex gap-2 text-sm">
-                  <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", e.kind === "risk" ? "bg-warning" : e.kind === "success" ? "bg-success" : "bg-primary")} />
-                  <span className="text-muted-foreground">{new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                  <span>{e.label}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-xs text-muted-foreground">This explanation is a predefined demo scenario. No real AI model or live courier feed is connected.</p>
           </div>
+
+          {!o.recovery && stage < 4 && (
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
+              <p className="text-xs font-bold uppercase tracking-wider text-violet">OrderPulse recommendation</p>
+              <h2 className="mt-1 font-display text-lg font-bold">{opts.find((option) => option.action === recommended)?.title ?? "Keep waiting"}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{sc.recommendationReason}</p>
+              <p className="mt-3 text-xs text-muted-foreground">Demo recommendation only — no live AI is connected. The choice remains yours.</p>
+            </div>
+          )}
 
           {o.recovery && (
             <div data-testid="recovery-result" className="rounded-2xl bg-success/15 p-5 text-success-strong">
@@ -122,9 +101,6 @@ function RecoveryPage() {
               {o.recovery.action === "replace" && <p className="mt-2 text-sm">Requested: {sc.replacement} — pending simulated restaurant confirmation. Nothing is final yet.</p>}
               {o.recovery.action === "cancel" && <p className="mt-2 text-sm">{refundPolicy(o).text} No real refund or payment is processed in this demo.</p>}
               {o.recovery.action === "wait" && <p className="mt-2 text-sm">Order still active · monitoring simulated events · current stage: <b>{STAGES[stage]}</b></p>}
-              {o.recovery.action === "wait" && stage < 4 && (
-                <button onClick={() => simulateEtaDelay(o.id, 20)} className="mt-3 mr-2 rounded-xl border border-warning px-4 py-2 text-sm font-bold text-warning">Simulate another +20 min ETA delay</button>
-              )}
               <Link to="/order/$id" params={{ id: o.id }} className="mt-3 inline-block rounded-xl bg-success px-4 py-2 text-sm font-bold text-success-foreground">Track order</Link>
             </div>
           )}
@@ -152,36 +128,76 @@ function RecoveryPage() {
 
           {!o.recovery && stage < 4 && (
             <div className="space-y-3">
-              <h2 className="font-display text-lg font-bold">Your options</h2>
-              <p className="text-sm text-muted-foreground">Only options allowed by the demo policy for this situation are shown. Nothing happens until you confirm.</p>
+              <h2 className="font-display text-lg font-bold">Your available choices</h2>
+              <p className="text-sm text-muted-foreground">Demo policy has already checked which choices apply. Nothing happens until you confirm.</p>
               {opts.map((op) => {
                 const Icon = ICONS[op.action];
-                const done = (op.action === "support" && o.supportRef) || (op.action === "cancel" && o.cancelDenied);
                 return (
-                  <button key={op.action} disabled={!!done} onClick={() => setPending(op.action)} className={cn("flex w-full items-start gap-3 rounded-2xl border bg-card p-4 text-left transition hover:border-primary disabled:opacity-60", pending === op.action && "border-primary ring-2 ring-primary/30")}>
+                  <Button key={op.action} variant="outline" onClick={() => setPending(op.action)} className={cn("h-auto w-full items-start justify-start whitespace-normal rounded-2xl bg-card p-4 text-left", pending === op.action && "border-primary ring-2 ring-primary/30")}>
                     <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", op.action === "cancel" ? "text-warning" : "text-primary")} />
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-bold">{op.title}</span>
                         {op.action === recommended && <span className="rounded-full bg-violet/15 px-2 py-0.5 text-[10px] font-bold uppercase text-violet">Suggested</span>}
-                        {done && <span className="text-xs text-success-strong">Ticket {o.supportRef}</span>}
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">{op.detail}</p>
                     </div>
-                  </button>
+                  </Button>
                 );
               })}
               {pending && (
                 <div className="sticky bottom-20 flex flex-col gap-2 rounded-2xl border-2 border-primary bg-card p-4 shadow-card sm:flex-row sm:items-center md:bottom-4">
-                  <div className="flex-1 text-sm"><p className="font-semibold">Confirm: {opts.find((x) => x.action === pending)?.title}?</p>{pending === "cancel" && <p data-testid="cancel-eligibility" className="mt-1 text-muted-foreground">{refundPolicy(o).eligible ? "Demo policy check: eligible for a full refund once confirmed (simulated)." : "Demo policy check: not eligible — confirming will keep your order active."}</p>}</div>
-                  <button onClick={() => setPending(null)} className="rounded-xl border px-4 py-2 text-sm font-semibold">Go back</button>
-                  <button onClick={confirm} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Confirm choice</button>
+                  <div className="flex-1 text-sm"><p className="font-semibold">Confirm: {opts.find((x) => x.action === pending)?.title}?</p>{pending === "cancel" && <p data-testid="cancel-eligibility" className="mt-1 text-muted-foreground">Demo policy check: eligible for a full refund once confirmed (simulated).</p>}</div>
+                  <Button variant="outline" onClick={() => setPending(null)}>Go back</Button>
+                  <Button onClick={confirm}>Confirm choice</Button>
                 </div>
               )}
             </div>
           )}
         </>
       )}
+
+      <details className="group rounded-2xl border bg-card p-5">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-display font-bold">
+          <span>How OrderPulse handled this</span>
+          <ChevronDown className="h-5 w-5 text-muted-foreground transition group-open:rotate-180" />
+        </summary>
+        <div className="mt-4 space-y-4 border-t pt-4">
+          <div className="no-scrollbar flex gap-1 overflow-x-auto">
+            {FLOW.map((item, index) => (
+              <span key={item} className={cn("shrink-0 rounded-full px-3 py-1 text-xs font-semibold", !o.risk && index === 0 ? "bg-primary text-primary-foreground" : o.risk ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>{index + 1}. {item}</span>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground">Monitoring, risk detection, policy checks, option evaluation, and continued tracking run automatically in this browser-based demo.</p>
+          {o.risk && (
+            <>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Simulated delivery events</p>
+              <ul className="space-y-1.5">
+                {o.events.map((event, index) => (
+                  <li key={`${event.at}-${index}`} className="flex gap-2 text-sm">
+                    <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", event.kind === "risk" ? "bg-warning" : event.kind === "success" ? "bg-success" : "bg-primary")} />
+                    <span className="text-muted-foreground">{new Date(event.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                    <span>{event.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {stage < 4 && (
+            <div className="rounded-xl border border-dashed p-4">
+              <p className="text-sm font-semibold">Demo simulator</p>
+              <p className="mt-1 text-xs text-muted-foreground">Optional case-study controls only. Customer monitoring does not require these buttons.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {!o.risk && applicable && <Button variant="secondary" onClick={() => triggerDelay(o.id, now)}>Simulate {applicable.title.toLowerCase()}</Button>}
+                {!o.risk && <Button variant="outline" onClick={() => simulateEtaDelay(o.id, 20)}>Simulate +20 min ETA</Button>}
+                {!o.risk && <Button variant="outline" onClick={() => simulateEtaDelay(o.id, 5)}>Simulate minor +5 min</Button>}
+                {o.recovery?.action === "wait" && <Button variant="outline" onClick={() => simulateEtaDelay(o.id, 20)}>Simulate another +20 min ETA</Button>}
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">Demo only: no live AI, restaurant inventory, courier feed, payment or refund processing, or support integration.</p>
+        </div>
+      </details>
     </div>
   );
 }

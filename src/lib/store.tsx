@@ -8,6 +8,7 @@ export type Notif = { id: string; orderId: string; key: string; at: number; titl
 type State = { cart: Cart; orders: Order[]; location: string; notifications: Notif[] };
 
 const KEY = "orderpulse-demo-v1";
+const AUTO_RISK_AFTER_MS = 8_000;
 const initial: State = { cart: { restaurantId: null, items: {} }, orders: [], location: "Indiranagar", notifications: [] };
 
 type Ctx = State & {
@@ -66,6 +67,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
       return { ...s, orders, notifications: [notif, ...s.notifications] };
     });
+
+  // Demo monitor: automatically evaluates active orders and routes one stage-appropriate
+  // simulated problem through the same deduplicated event handler used by demo controls.
+  useEffect(() => {
+    if (!ready) return;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setState((current) => {
+        let next = current;
+        for (const order of current.orders) {
+          if (order.risk || order.recovery?.action === "cancel" || now - order.placedAt < AUTO_RISK_AFTER_MS || getStage(order, now) === 4) continue;
+          const scenario = scenarios.find((candidate) => candidate.appliesToStages.includes(getStage(order, now)));
+          const event = scenario && scenarioEvent(scenario.id, order.id);
+          if (!event) continue;
+          const latestOrder = next.orders.find((candidate) => candidate.id === order.id);
+          if (!latestOrder) continue;
+          const result = handleDeliveryEvent(latestOrder, event, now);
+          const orders = next.orders.map((candidate) => candidate.id === order.id ? result.order : candidate);
+          const alert = result.alerted ? result.order.alerts?.[result.order.alerts.length - 1] : undefined;
+          if (!alert || next.notifications.some((notification) => notification.orderId === order.id && notification.key === alert.key)) {
+            next = { ...next, orders };
+            continue;
+          }
+          next = {
+            ...next,
+            orders,
+            notifications: [{
+              id: ref("NTF"), orderId: order.id, key: alert.key, at: now, read: false,
+              title: `Delivery at risk · ${order.restaurantName}`,
+              body: `[Simulated demo event] ${event.label}`,
+            }, ...next.notifications],
+          };
+        }
+        return next;
+      });
+    }, 1_000);
+    return () => window.clearInterval(timer);
+  }, [ready]);
 
   const value: Ctx = {
     ...state,
