@@ -11,3 +11,4 @@
 
 - Demo data persists in browser localStorage via `src/lib/store.tsx` (no Cloud backend yet) — spec allows local demo mode; swap store for Cloud later.
 - Recovery eligibility/refund rules live only in `src/lib/recovery.ts` — explanations never decide policy.
+- Automatic demo monitoring routes deterministic simulated risks through the centralized event handler so event and notification deduplication remain authoritative.

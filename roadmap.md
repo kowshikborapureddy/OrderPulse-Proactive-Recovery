@@ -6,3 +6,7 @@
 - [x] Replacement only when demo data confirms availability; pending state
 - [x] Decision notifications (deduped)
 - [x] Test all outcomes + refresh + dedup
+- [ ] Automation-first background demo monitoring
+- [ ] Customer-facing risk, recommendation, and policy-filtered choices
+- [ ] Expandable internal workflow and simulator
+- [ ] Verify automatic alert, outcomes, refresh, dedup, and responsive layout

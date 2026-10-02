@@ -9,6 +9,9 @@ export type RecoveryAction = "wait" | "replace" | "cancel" | "support";
 export type Scenario = {
   id: string;
   title: string;
+  customerSummary: string;
+  recommendedAction: Extract<RecoveryAction, "wait" | "replace">;
+  recommendationReason: string;
   appliesToStages: number[];
   events: string[]; // delivery events provided by the demo system
   explanation: string; // predefined demo explanation
@@ -20,6 +23,9 @@ export const scenarios: Scenario[] = [
   {
     id: "kitchen-backlog",
     title: "Kitchen backlog",
+    customerSummary: "The restaurant is experiencing a preparation delay. Your order has not been picked up yet.",
+    recommendedAction: "replace",
+    recommendationReason: "A same-price ready-now alternative is available in this demo, which may avoid more preparation time.",
     appliesToStages: [0, 1],
     events: [
       "Restaurant reported a high order volume",
@@ -33,6 +39,9 @@ export const scenarios: Scenario[] = [
   {
     id: "rider-breakdown",
     title: "Rider vehicle issue",
+    customerSummary: "Your rider reported a vehicle issue after pickup. The demo dispatch system has reassigned the order.",
+    recommendedAction: "wait",
+    recommendationReason: "A replacement rider and a simulated revised ETA are already available, so waiting is the least disruptive option.",
     appliesToStages: [2, 3],
     events: [
       "Rider reported a vehicle breakdown",
@@ -47,6 +56,9 @@ export const scenarios: Scenario[] = [
   {
     id: "eta-delay",
     title: "Simulated ETA delay",
+    customerSummary: "The simulated delivery estimate moved at least 15 minutes later than the previous verified estimate.",
+    recommendedAction: "wait",
+    recommendationReason: "The order is still active and the demo can continue monitoring for another update.",
     appliesToStages: [],
     events: ["Simulated ETA update moved delivery 15+ min later"],
     explanation:
@@ -127,8 +139,10 @@ export function availableOptions(o: Order) {
     },
   ];
   if (s?.replacement) opts.push({ action: "replace", title: "Choose a replacement", detail: s.replacement });
-  opts.push({ action: "cancel", title: "Request cancellation", detail: refundPolicy(o).text });
-  opts.push({ action: "support", title: "Contact support", detail: "Open a support ticket. You can still choose another option afterwards." });
+  if (refundPolicy(o).eligible && !o.cancelDenied)
+    opts.push({ action: "cancel", title: "Request cancellation", detail: refundPolicy(o).text });
+  if (!o.supportRef)
+    opts.push({ action: "support", title: "Contact support", detail: "Create a demo support handoff. No real agent will be contacted." });
   return opts;
 }
 
