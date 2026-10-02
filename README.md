@@ -1,238 +1,245 @@
-# OrderPulse
+# OrderPulse — Proactive Recovery for Food Delivery
 
-OrderPulse — Working Food Delivery & Proactive Recovery MVP
+> **When delivery fails, recover the meal — not just the money.**
 
-Build a fully functional, responsive food-delivery web application called OrderPulse, inspired by the uploaded food-delivery UI reference images.
+OrderPulse is a **working browser-based product prototype** exploring proactive recovery in food delivery. It monitors a demo order flow, detects meaningful delivery risk, explains what happened, evaluates policy-eligible recovery options, and lets the customer make the final decision.
 
-This must be a working application, not just a landing page, static mockup, or collection of non-functional screens.
+**Core principle:** **AI recommends. Policy controls. Customer decides.**
 
-1. Product vision
+## Product Problem
 
-OrderPulse is a food-delivery experience that helps customers discover food, place orders, track delivery, and receive proactive recovery options when a delivery may be delayed or disrupted.
+Customers can discover delivery problems only after an order is already significantly delayed. OrderPulse explores a more proactive experience:
 
-Core product principle:
+**Detect risk earlier → communicate clearly → offer meaningful recovery → let the customer decide.**
 
-AI recommends. Policy controls. Customer decides.
+## Core Experience
 
-2. Design and visual direction
+```text
+Customer places order
+        ↓
+OrderPulse monitors demo delivery events
+        ↓
+Delivery risk is detected
+        ↓
+Policy eligibility is checked
+        ↓
+Relevant recovery options are evaluated
+        ↓
+Customer receives a proactive alert
+        ↓
+OrderPulse recommends an option
+        ↓
+Customer decides
+        ↓
+Decision is saved
+        ↓
+Order continues to be tracked
+```
 
-Use the uploaded food-delivery screenshots as visual inspiration for:
+## What the Current Prototype Includes
 
-Food category carousels with food illustrations or images.
+### Food delivery
 
-Restaurant discovery cards with ratings, cuisine, location, offers, and delivery estimates.
+- Restaurant discovery and food categories
+- Search, filters and sorting
+- Restaurant menus
+- Cart and quantity management
+- Demo checkout
+- Generated demo order IDs
+- Order tracking: **Confirmed → Preparing → Picked Up → On the Way → Delivered**
+
+### Proactive recovery
+
+- Simulated delivery-risk events
+- Early risk alerts
+- Delivery-event explanation
+- ETA handling without inventing unavailable values
+- Policy-controlled recovery choices
+- Continue waiting
+- Cancellation request with demo policy checks
+- Replacement request with demo availability rules
+- Demo support handoff
+- Recovery decision persistence
+- Notification history and deduplication
+- Delivered-order safeguards
+
+## Product Decision Model
+
+OrderPulse deliberately separates responsibilities:
 
-Search bars, location selection, filters, and sorting.
+| Layer | Responsibility |
+|---|---|
+| AI-assisted layer | Explain events and recommend among allowed options |
+| Policy layer | Decide which recovery actions are eligible |
+| Customer | Make the final recovery decision |
+| Application logic | Control order state, prices and demo actions |
 
-Food menu pages with attractive item cards, prices, descriptions, and Add buttons.
+This prevents the AI layer from silently making financial or order-state decisions.
 
-Modern, spacious layouts with rounded cards and responsive navigation.
+## AI Approach
 
-Do not copy another brand's logo, name, or exact interface. Create an original OrderPulse identity.
+A future production implementation could use AI to:
 
-Use OrderPulse's existing visual identity:
+- summarize delivery events
+- explain a delivery risk in plain language
+- recommend a policy-approved recovery option
+- personalize the explanation based on order context
 
-Midnight navy and deep blue as the primary brand colors.
+The current prototype **does not claim a live AI model is connected**. It uses predefined demo scenarios and clearly labels simulated behavior.
 
-Indigo and violet for buttons, active states, and highlights.
+The same principle applies to restaurant/courier data, payments, refunds and support: these are demo flows, not live integrations.
 
-White or soft neutral backgrounds for food discovery and menu pages.
+## Automation-first Product Direction
 
-Mint green for successful states.
+The detailed internal workflow is:
 
-Coral/red only for delivery warnings and errors.
+**Monitor → Detect → Warn → Explain → Options → Choose → Track**
 
-Use high-quality food images, clear typography, responsive layouts, and a mobile-first experience. Avoid excessive animations and clutter.
+The intended customer experience is simpler:
 
-3. Customer-facing pages
+**Proactive alert → concise explanation → recommendation → relevant choices → customer decision → confirmation**
 
-Build these pages with working navigation and interactions:
-
-A. Home / Food Discovery
-
-Location selector.
-
-Search for restaurants and food.
-
-Food category carousel: Biryani, North Indian, South Indian, Pizza, Desserts, Burgers, Rolls, Noodles, and more.
-
-Restaurant cards with image, name, cuisine, rating, delivery estimate, and available offers.
-
-Search, category selection, filters, and sorting must work.
-
-B. Restaurant and Menu
-
-Open a restaurant to view its menu.
-
-Show food images, item names, descriptions, prices, vegetarian indicators, and availability.
-
-Add or remove items from the cart.
-
-Support quantity changes and calculate the subtotal.
-
-C. Cart and Checkout
-
-Display selected items and quantities.
-
-Calculate item subtotal, delivery fee, taxes or other charges if configured, and final total.
-
-Collect customer name, phone number, and delivery address.
-
-Include a demo checkout flow with a clear order confirmation.
-
-Do not collect real payment information or claim that a payment has been processed.
-
-D. Order Confirmation and Tracking
-
-Generate a unique order ID.
-
-Display restaurant, items, order total, and estimated delivery time.
-
-Show delivery stages: Order Confirmed → Preparing → Picked Up → On the Way → Delivered.
-
-Allow the customer to open the OrderPulse recovery experience from the active order.
-
-4. Core feature — Proactive OrderPulse Recovery
-
-This is the main differentiating feature and must work in the MVP.
-
-Create a dedicated recovery interface for each active order.
-
-The flow should be:
-
-Monitor Order → Detect Delivery Risk → Early Warning → Explain the Situation → Show Recovery Options → Customer Chooses → Track Recovery.
-
-Include a working demo scenario where a delivery becomes delayed.
-
-When the demo delay is triggered:
-
-Update the order to show a delivery-risk state.
-
-Display an early warning to the customer.
-
-Explain the reason using the demo data available.
-
-Show the revised ETA only when it is supplied by the demo system. Never invent a live ETA.
-
-Present available actions based on configured demo policies.
-
-Recovery options:
-
-Continue waiting and monitor the order.
-
-Choose an available alternative or replacement, if configured.
-
-Request cancellation and display the applicable demo refund policy.
-
-Contact support.
-
-When a customer chooses an option, update the order state and show a confirmation screen.
-
-Do not guarantee a refund unless the configured demo policy explicitly allows it. Do not automatically cancel an order or make a purchase decision for the customer.
-
-5. AI-assisted explanation
-
-Implement an AI-assisted recovery layer only if a working model/API integration can be configured.
-
-The AI may summarize provided delivery events, explain the risk, and recommend among policy-approved options.
-
-Keep eligibility, prices, refund rules, and order state changes controlled by application logic.
-
-If no AI API is configured, provide a clearly labelled demo explanation using predefined scenarios. Do not pretend that a real AI model or live delivery integration is running.
-
-6. Demo data and backend
-
-Use realistic sample restaurants, menus, food images, and delivery scenarios so the application can be tested immediately.
-
-Use Supabase for persistent storage and authentication if the project environment supports it.
-
-Suggested data entities:
-
-Restaurants
-
-Menu items
-
-Customer profiles
-
-Orders and order items
-
-Delivery events
-
-Recovery actions
-
-Demo recovery policies
-
-Keep customer data private. A customer should only be able to access their own orders.
-
-If Supabase credentials are not configured, implement a functional local demo with persistent browser storage and clearly indicate that it is demo mode.
-
-7. Navigation and user experience
-
-Desktop navigation: OrderPulse logo, Home, Search, My Orders, and Cart.
-
-Mobile navigation: Home, Search, Orders, and Cart.
-
-Include loading states, empty states, validation messages, success confirmations, and error handling.
-
-Every button, filter, navigation item, cart action, and recovery action must have a meaningful working interaction.
-
-8. Technical requirements
-
-React with TypeScript.
-
-Responsive, reusable components.
-
-Tailwind CSS for styling.
-
-Supabase integration where configured.
-
-Clean and maintainable project structure.
-
-Functional routing between pages.
-
-No dead buttons or placeholder screens presented as completed features.
-
-9. Acceptance criteria
-
-Consider the MVP complete only when a user can:
-
-Browse restaurants and food categories.
-
-Search for food and open a restaurant menu.
-
-Add food to a cart and update quantities.
-
-Complete a demo checkout and receive an order ID.
-
-Track the order through its delivery stages.
-
-Trigger a demo delivery delay.
-
-See the risk explanation and available recovery choices.
-
-Select an option and see the order's updated recovery status.
-
-Refresh the page and retain demo order data.
-
-Build the application in working stages. Start with the food discovery, restaurant menu, cart, and demo checkout. Then implement order tracking and proactive recovery. Do not stop after generating the homepage.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/f70156d1-5c87-49ef-bc8a-d3f2f639c59b).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+The customer should not have to manually operate the internal monitoring workflow.
+
+## Product & Technical Architecture
+
+```text
+UI / Routes
+    ↓
+Order & Recovery Store
+    ↓
+Delivery Event Handler
+    ↓
+Recovery Policy Logic
+    ↓
+Customer Decision
+    ↓
+Persisted Demo State
+    ↓
+Notification History
+```
+
+Recovery eligibility is centralized in application logic rather than being inferred from explanation text.
+
+## Tech Stack
+
+- React
+- TypeScript
+- TanStack Start
+- TanStack Router
+- Vite
+- Tailwind CSS
+- Lucide React
+- Browser local storage for demo persistence
+
+## Validation & Demo Tests
+
+The current implementation has been tested around:
+
+- Small delay → no unnecessary alert
+- Significant risk → proactive alert
+- Continue waiting → saved decision
+- Eligible cancellation → request state saved
+- Ineligible cancellation → blocked with explanation
+- Replacement available → request can be submitted
+- Replacement unavailable → not offered
+- Support → demo handoff created
+- Refresh → state persists
+- Duplicate events → duplicate notification prevented
+- Delivered order → recovery actions restricted
+
+## Current Limitations
+
+This is a **working prototype/demo**, not a production food-delivery integration.
+
+Production would require:
+
+- Live restaurant/order/courier event ingestion
+- Server-side order and event storage
+- Background processing
+- Real push notifications
+- Production authentication and authorization
+- Real payment/refund processing
+- Real customer-support integration
+- Stronger privacy, security and observability controls
+- Evaluation infrastructure for any production AI recommendations
+
+## Run Locally
+
+### Prerequisites
+
+- Node.js
+- npm
+
+### Setup
+
+```bash
+git clone https://github.com/kowshikborapureddy/OrderPulse-Proactive-Recovery.git
+cd OrderPulse-Proactive-Recovery
+npm install
 npm run dev
 ```
+
+For a production build:
+
+```bash
+npm run build
+```
+
+## Project Artifacts
+
+- **[Product Case Study PDF](./OrderPulse%20Product%20Case%20Study%20PDF.pdf)**
+- **[PRD](./OrderPulse_PRD.docx)**
+- **[Figma Product Design](https://www.figma.com/community/file/1684126733595502890/orderpulse-proactive-recovery-for-late-night-food-delivery)**
+- **[Medium Case Study](https://medium.com/@kowshikborapureddy/orderpulse-proactive-recovery-for-late-night-food-delivery-4954bb6d41be)**
+
+## Roadmap
+
+### Next
+
+- Live order-event ingestion
+- Backend event history
+- Production push notifications
+- Production authentication
+- Support workflow integration
+
+### Future
+
+- Model-backed recovery explanations
+- AI evaluation framework
+- Richer policy engine
+- Recovery analytics
+- Experimentation framework for customer outcomes
+
+## Why I Built OrderPulse
+
+The product exploration started with one question:
+
+> **What if a food-delivery platform spoke up before the customer had to complain?**
+
+The project combines **product discovery, customer-journey thinking, requirements, prototyping, implementation, recovery logic, testing and iteration**.
+
+## AI-Assisted Development
+
+OrderPulse was developed using **AI-assisted coding/prototyping workflows**. Product requirements, interaction decisions, policy logic and testing were reviewed during implementation.
+
+AI is treated as a development accelerator — not as a replacement for product judgment.
+
+## Project Status
+
+**Status:** Working product prototype / demo  
+**Focus:** AI-assisted proactive recovery  
+**Product:** Consumer food-delivery recovery experience
+
+## Author
+
+**Kowshik Borapureddy**
+
+Product Management • AI Product • Product Engineering
+
+- GitHub: https://github.com/kowshikborapureddy
+- Portfolio: https://kowshik-portfolio-gamma.vercel.app/
+
+---
+
+> OrderPulse is an independent product project and is not affiliated with or operated by any food-delivery company referenced for UX inspiration.
