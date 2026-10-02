@@ -1,4 +1,4 @@
-# Orderly Eats
+# OrderPulse
 
 OrderPulse — Working Food Delivery & Proactive Recovery MVP
 
